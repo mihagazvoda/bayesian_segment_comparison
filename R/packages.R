@@ -1,0 +1,8 @@
+library(dplyr)
+library(rethinking)
+library(ggplot2)
+library(recipes)
+library(tidyr)
+library(purrr)
+library(rsample)
+# library(parsnip)
