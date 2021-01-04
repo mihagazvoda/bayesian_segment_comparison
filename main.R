@@ -46,12 +46,11 @@ cv <- sliding_window(
 
 cv %>% 
   select(-c(splits, model, predictions_train)) %>% 
-  rename(fold_id = id) %>% 
   unnest(cols = predictions_test) %>% 
   ggplot() +
-  geom_boxplot(aes(id, prediction, group = id)) + 
-  geom_point(aes(id, y), color = "red") +
-  facet_grid(~fold_id)
+  geom_boxplot(aes(.row, .prediction, group = .row)) + 
+  geom_point(aes(.row, y), color = "red") +
+  facet_grid(~id)
 
 # ---- build model ----
 m <- build_model(train_data)

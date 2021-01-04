@@ -1,20 +1,9 @@
 create_prediction_table <- function(model, data, n = 100) {
-  browser()
-  sim(model, n = n, data = data) %>% 
-    as_tibble() %>% 
-    mutate(sample = row_number()) %>% 
-    pivot_longer(
-      !sample, 
-      names_to = "point", 
-      values_to = "prediction"
-    ) %>% 
-    mutate(id = as.integer(stringr::str_remove(point, "V"))) %>% 
-    inner_join(mutate(data, id = row_number()), by = "id") %>% 
-    select(-point) %>% 
+  predicted_draws(model = model, newdata = data, n = n) %>% 
     mutate(
-      diff = prediction - y,
+      diff = .prediction - y,
       rel_diff = diff / y,
-      z_score = (mean(prediction) - y) / sd(prediction)
+      z_score = (mean(.prediction) - y) / sd(.prediction)
     )
 }
 

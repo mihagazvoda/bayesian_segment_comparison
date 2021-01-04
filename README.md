@@ -9,4 +9,5 @@ The goal of `bayesian_segment_comparison` is to use Bayesian methods (ok, linear
 
 * Maybe use `tidybayes` instead of `rethinking`?
 * Does it make sense to assess the average difference between predicted and actual?
-* How good can we actually predict?
+* How good can we actually predict? How much does it matter?
+* Rescale parameters back?
