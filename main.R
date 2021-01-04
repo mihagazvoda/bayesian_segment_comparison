@@ -41,21 +41,25 @@ cv <- sliding_window(
       model,
       splits,
       ~ create_prediction_table(.x, assessment(.y), n = 100)
-    )
+    ),
+    metrics = map(
+      predictions_test, 
+      ~yardstick::metrics(.x, truth = y, estimate = .prediction))
   )
 
 cv %>% 
   select(-c(splits, model, predictions_train)) %>% 
   unnest(cols = predictions_test) %>% 
   ggplot() +
-  geom_boxplot(aes(.row, .prediction, group = .row)) + 
+  geom_point(aes(.row, .prediction, group = .row)) + 
+  geom_errorbar(aes(x = .row , ymin = .prediction + sd, ymax = .prediction - sd)) + 
   geom_point(aes(.row, y), color = "red") +
   facet_grid(~id)
 
 # ---- build model ----
 m <- build_model(train_data)
 
-predictions <- create_prediction_table(m, test_data, n = 100)
+
 
 predictions %>% 
   ggplot() +
@@ -73,20 +77,3 @@ m_avg <- quap(
 tidybayes::tidy_draws(m_avg) %>% 
   ggplot(aes(mu)) + 
   geom_histogram()
-
-# # ---- tiydmodels ----
-# bayes_mod <-   
-#   linear_reg() %>% 
-#   set_engine("stan", 
-#              prior_intercept = rstanarm::normal(0, 0.1), 
-#              prior = rstanarm::normal(0, 0.5)
-#            ) 
-# 
-# bayes_fit <- bayes_mod %>% 
-#   fit(y ~ ., data = train_data)
-# 
-# tidy(bayes_fit, conf.int = TRUE)
-# 
-# broom::tidy(bayes_fit, conf.int = TRUE)
-# 
-# rstanarm::normal(location = 0)

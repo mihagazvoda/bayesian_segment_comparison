@@ -1,9 +1,16 @@
+# maybe aggregate?
 create_prediction_table <- function(model, data, n = 100) {
   predicted_draws(model = model, newdata = data, n = n) %>% 
+    group_by(.row) %>% 
+    summarise(
+      sd = sd(.prediction),
+      .prediction = mean(.prediction),
+      y = mean(y)
+    ) %>% 
     mutate(
       diff = .prediction - y,
       rel_diff = diff / y,
-      z_score = (mean(.prediction) - y) / sd(.prediction)
+      z_score = (.prediction - y) / sd(.prediction)
     )
 }
 
