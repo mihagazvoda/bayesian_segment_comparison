@@ -17,63 +17,36 @@ test_data_raw <- filter(df, date >= CHANGE_DATE)
 
 rec <- recipe(y ~ ., data = train_data_raw) %>%
   step_rm(date) %>%
-  step_normalize(all_numeric()) %>%
-  prep()
-
-train_data <- bake(rec, new_data = train_data_raw)
-test_data <- bake(rec, new_data = test_data_raw)
+  step_normalize(all_numeric())
 
 # ---- CV ----
 cv <- sliding_window(
-  train_data,
+  train_data_raw,
   lookback = SEGMENT_LENGTH,
   assess_stop = SEGMENT_LENGTH,
   step = SEGMENT_LENGTH
-) %>%
+) %>% 
   mutate(
-    model = map(splits, ~ build_model(analysis(.))),
-    predictions_train = map2(
-      model,
-      splits,
-      ~ create_prediction_table(.x, analysis(.y), n = 100)
+    recipes = map(splits, prepper, recipe = rec),
+    model = map(recipes, fit_lm, y ~ .),
+    predictions = pmap(
+      lst(split_obj = splits, rec_obj = recipes,model_obj = model),
+      pred_lm
     ),
-    predictions_test = map2(
-      model,
-      splits,
-      ~ create_prediction_table(.x, assessment(.y), n = 100)
-    ),
-    metrics = map(
-      predictions_test, 
-      ~yardstick::metrics(.x, truth = y, estimate = .prediction))
+    metrics <- map(predictions, metrics, truth = truth, estimate = estimate)
   )
 
-cv %>% 
-  select(-c(splits, model, predictions_train)) %>% 
-  unnest(cols = predictions_test) %>% 
-  ggplot() +
-  geom_point(aes(.row, .prediction, group = .row)) + 
-  geom_errorbar(aes(x = .row , ymin = .prediction + sd, ymax = .prediction - sd)) + 
-  geom_point(aes(.row, y), color = "red") +
-  facet_grid(~id)
+# cv$recipes <- map(cv$splits, prepper, recipe = rec)
+# 
+# cv$model <- map(cv$recipes, fit_lm, y ~ .)
+# 
+# cv$pred <- pmap(
+#   lst(
+#     split_obj = cv$splits,
+#     rec_obj = cv$recipes,
+#     model_obj = cv$model
+#   ),
+#   pred_lm
+# )
 
-# ---- build model ----
-m <- build_model(train_data)
-
-
-
-predictions %>% 
-  ggplot() +
-  geom_histogram(aes((z_score)))
-
-m_avg <- quap(
-  alist(
-    norm_diff ~ dnorm(mu, sigma),
-    mu ~ dnorm(0, 0.25),
-    sigma ~ dexp(0.5)
-  ),
-  data = list(norm_diff = unique(predictions$z_score))
-)
-
-tidybayes::tidy_draws(m_avg) %>% 
-  ggplot(aes(mu)) + 
-  geom_histogram()
+# cv$metrics <- map(cv$predictions, yardstick::metrics, truth = truth, estimate = estimate)

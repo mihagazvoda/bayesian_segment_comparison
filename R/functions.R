@@ -1,28 +1,24 @@
-# maybe aggregate?
-create_prediction_table <- function(model, data, n = 100) {
-  predicted_draws(model = model, newdata = data, n = n) %>% 
-    group_by(.row) %>% 
-    summarise(
-      sd = sd(.prediction),
-      .prediction = mean(.prediction),
-      y = mean(y)
-    ) %>% 
-    mutate(
-      diff = .prediction - y,
-      rel_diff = diff / y,
-      z_score = (.prediction - y) / sd(.prediction)
-    )
+fit_lm <- function(rec_obj, ...) {
+  linear_reg() %>%
+    set_engine("lm") %>%
+    fit(..., data = juice(rec_obj, everything()))
 }
 
-build_model <- function(data) {
-  quap(
-    alist(
-      y ~ dnorm(mu, sigma),
-      mu <- a * x1 + b * x2,
-      a ~ dnorm(0, 1),
-      b ~ dnorm(0, 1),
-      sigma ~ exp(0.25)
-    ),
-    data = data
+pred_lm <- function(split_obj, rec_obj, model_obj, ...) {
+  mod_data <- bake(
+    rec_obj,
+    new_data = assessment(split_obj)
   )
+
+  # out <- select(mod_data, y)
+  predict(
+    model_obj,
+    new_data = mod_data,
+    type = "pred_int",
+    level = 0.95
+  ) %>%
+    mutate(
+      estimate = (.pred_lower + .pred_upper) / 2,
+      truth = mod_data$y
+    )
 }
